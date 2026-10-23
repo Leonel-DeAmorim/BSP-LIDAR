@@ -5,6 +5,7 @@ import numpy as np
 import json
 import urllib.request
 import time
+
 def save_point_cloud(saved_hits, filename="momentum_lidar.ply"):
     if not saved_hits:
         print("No LiDAR points to save.")
@@ -21,6 +22,8 @@ def save_point_cloud(saved_hits, filename="momentum_lidar.ply"):
 
     o3d.io.write_point_cloud(filename, cloud)
     print(f"Saved {len(points)} points to {filename}")
+
+
 #Define function for receiving game data
 def get_game_data():
    #Local server provides the latest player position and viewing angles
@@ -115,8 +118,6 @@ mesh.triangle["indices"] = o3d.core.Tensor(all_triangles)
 scene = o3d.t.geometry.RaycastingScene()
 scene.add_triangles(mesh)
 
-#Hieght of the LIDAR above player's position
-eye_height = 64
 #Maximum distance a ray can travel through the map
 max_range = 15000.0
 #Horizontal and vertical fov covered by LIDAR
@@ -188,8 +189,8 @@ origin_cloud.paint_uniform_color([0.0, 0.0, 1.0])
 ray_lines = o3d.geometry.LineSet()
 ray_lines.paint_uniform_color([1.0, 0.8, 0.0])
 
-#Place LIDAR origin at lpayer height
-origin = player_position +np.array([0.0, 0.0, eye_height])
+#Place LIDAR origin at player height
+origin = player_position.copy()
 
 #Save the previous position so coordinate frame can follow player
 previous_origin = origin.copy()
@@ -207,6 +208,14 @@ vis.create_window(
    width= 1200,
    height= 800
 )
+
+#Get camera view controller
+view_control = vis.get_view_control()
+#Set near clipping plane to prevent nearby surfaces from being clipped
+view_control.set_constant_z_near(0.1)
+#Extend the far clipping plane to keep distan surfaces visible
+view_control.set_constant_z_far(20000.0)
+
 #Configuire how the map is drawn
 render_option = vis.get_render_option()
 render_option.mesh_show_wireframe =True
@@ -271,9 +280,7 @@ while vis.poll_events():
          player_data["z"]
       ], dtype=float)
       #Move the LIDAR origin to the players current position and height
-      origin = player_position + np.array([
-         0.0, 0.0, eye_height
-      ])
+      origin = player_position.copy()
       #Read the players pitch and yaw
       angle_data = game_data["angles"]
 
